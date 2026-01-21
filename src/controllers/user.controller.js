@@ -4,28 +4,27 @@ import {uploadOnCloudinary} from '../utils/cloudinary.js'
 
 const registerUser = asyncHandler( async (req, res) => {
     const {username, email, fullName, password} = req.body
-    console.log(username)
 
     if(username?.trim() === '' || email?.trim() === '' || fullName?.trim() === '' || password?.trim() === ''){
         res.status(400)
-        throw new Error('Username is required')
-        
     }
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
          $or: [{username},{email}]
     })
     if(existedUser){
         res.status(409)
-        throw new Error('Username or email already exist.')
     }
 
     const avatarLocalPath = req.files?.avatar[0]?.path
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+   
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+        coverImageLocalPath = req.files.coverImage[0].path
+    }
 
     if(!avatarLocalPath){
-        req.status(400)
-        throw new Error('Avatar is required')
+        res.status(400)
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
@@ -33,7 +32,6 @@ const registerUser = asyncHandler( async (req, res) => {
 
     if(!avatar){
         res.status(400)
-        throw new Error('Avatar is required')
     }
 
     const user = await User.create({
@@ -45,16 +43,15 @@ const registerUser = asyncHandler( async (req, res) => {
         username: username.toLowerCase()
     })
 
-    const createdUser = User.findById(user._id).select(
+    const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
 
     if(!createdUser){
         res.status(500)
-        throw new Error("Something went wrong while registering the user")
     }
 
-    return res.status(201).json(createdUser, 'User is registered successfully')
+    return res.status(201).json(createdUser)
 })
 
 export {registerUser} 
