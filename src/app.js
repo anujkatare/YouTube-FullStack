@@ -11,10 +11,12 @@ app.use(express.urlencoded({extended: true}))
 app.use(cookieParser())
 app.use(express.static('public'))
 
-app.get('/',(req, res) => {
-    res.send('hey')
+import userRouter from './routes/user.route.js'
+
+app.use('/api/v1/users', userRouter)
+
+app.listen(process.env.PORT, () =>{
+    console.log(`server is running on PORT: ${process.env.PORT}`)
 })
 
-app.listen(PORT, () =>{
-    console.log(`server is running on PORT: ${PORT}`)
-})
+export {app}
