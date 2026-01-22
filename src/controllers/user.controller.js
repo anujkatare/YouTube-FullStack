@@ -2,19 +2,18 @@ import {asyncHandler} from '../utils/asyncHandler.js'
 import {User} from '../models/user.model.js'
 import {uploadOnCloudinary} from '../utils/cloudinary.js'
 
-const generateAccessAndRefreshToken = async (uderId) => {
+const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId)
-        const accessToken = user.generateAccessToken
-        const refreshToken = user.generateRefreshToken
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
 
         user.refreshToken = refreshToken
         await user.save({validateBeforeSave: false})
 
         return {accessToken, refreshToken}
     } catch (error) {
-        res.status(500)
-        console.error('something went wrong')
+        throw error;
     }
 }
 
@@ -73,7 +72,7 @@ const registerUser = asyncHandler( async (req, res) => {
 const loginUser = asyncHandler(async (req, res ) => {
    const {username, email, password} = req.body
    if(!(username || email)){
-    req.status(404)
+    res.status(404)
     console.error('Username or email required')
    }
 
@@ -83,7 +82,7 @@ const loginUser = asyncHandler(async (req, res ) => {
 
    if(!user){
     res.status(404)
-    console.error('User not found')
+    throw new Error("User not found");
    }
 
    const isPasswordValid = await user.isPasswordCorrect(password)
@@ -98,13 +97,14 @@ const loginUser = asyncHandler(async (req, res ) => {
 
    const options = {
     httpOnly: true,
-    secure: true
+    secure: false,  
+    sameSite: "lax"
    }
     
    return res
    .status(200)
    .cookie('accessToken', accessToken, options)
-   .cookie("reefreshToken", refreshToken, options)
+   .cookie("refreshToken", refreshToken, options)
    .json({user: loggedInUser, accessToken, refreshToken})
 
 })
@@ -123,7 +123,8 @@ const logoutUser = asyncHandler( async (req, res) => {
     
     const options = {
     httpOnly: true,
-    secure: true
+    secure: false,
+    sameSite: "lax"
    }
 
    return res

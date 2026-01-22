@@ -7,12 +7,12 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
     try {
         const Token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
     
-        if(!token){
+        if(!Token){
             res.status(401)
             console.error("Unauthorized request")
         }
-    
-        const decodedToken = JWT.verify(token, process.env.ACCESS_TOKEN_SECRET)
+       
+        const decodedToken = JWT.verify(Token, process.env.ACCESS_TOKEN_SECRET)
     
         const user = await User
         .findById(decodedToken?._id)
