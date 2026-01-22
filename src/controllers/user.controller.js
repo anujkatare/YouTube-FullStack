@@ -2,6 +2,22 @@ import {asyncHandler} from '../utils/asyncHandler.js'
 import {User} from '../models/user.model.js'
 import {uploadOnCloudinary} from '../utils/cloudinary.js'
 
+const generateAccessAndRefreshToken = async (uderId) => {
+    try {
+        const user = await User.findById(userId)
+        const accessToken = user.generateAccessToken
+        const refreshToken = user.generateRefreshToken
+
+        user.refreshToken = refreshToken
+        await user.save({validateBeforeSave: false})
+
+        return {accessToken, refreshToken}
+    } catch (error) {
+        res.status(500)
+        console.error('something went wrong')
+    }
+}
+
 const registerUser = asyncHandler( async (req, res) => {
     const {username, email, fullName, password} = req.body
 
@@ -54,4 +70,47 @@ const registerUser = asyncHandler( async (req, res) => {
     return res.status(201).json(createdUser)
 })
 
-export {registerUser} 
+const loginUser = asyncHandler(async (req, res ) => {
+   const {username, email, password} = req.body
+   if(!username || !email){
+    req.status(404)
+    console.error('Username or email required')
+   }
+
+    const user = await User.findOne({
+    $or: [{username}, {email}]
+   })
+
+   if(!user){
+    res.status(404)
+    console.error('User not found')
+   }
+
+   const isPasswordValid = await user.isPasswordCorrect(password)
+
+   if(!isPasswordValid){
+    res.status(401)
+    console.error('Password is incorrect!')
+   }
+
+   const {accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id)
+   const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
+   const options = {
+    httpOnly: true,
+    secure: true
+   }
+    
+   return res
+   .status(200)
+   .cookie('accessToken', accessToken, options)
+   .cookie("reefreshToken", refreshToken, options)
+   .json({user: loggedInUser, accessToken, refreshToken})
+
+})
+
+const logoutUser = asyncHandler( async (req, res) => {
+    
+})
+
+export {registerUser, loginUser} 
