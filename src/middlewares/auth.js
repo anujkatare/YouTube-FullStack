@@ -3,7 +3,7 @@ import JWT from 'jsonwebtoken'
 import {User} from "../models/user.model.js"
 
 
-export default verifyJWT = asyncHandler(async (req, res, next) => {
+const verifyJWT = asyncHandler(async (req, res, next) => {
     try {
         const Token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
     
@@ -30,3 +30,5 @@ export default verifyJWT = asyncHandler(async (req, res, next) => {
         console.error("Error (Invalid Acess Token):", error)
     }
 })
+
+export default verifyJWT
