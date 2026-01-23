@@ -117,8 +117,8 @@ const logoutUser = asyncHandler( async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },{
             new: true
@@ -186,13 +186,15 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 })
 
 const changeCurrentPassword = asyncHandler( async (req, res) => {
+    console.log(req.body)
      const {oldPassword, newPassword} = req.body
+     
 
-    const user = await User.findById(req.body?._id)
+    const user = await User.findById(req.user._id)
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
     if(!isPasswordCorrect){
-        throw error("Password is incorrect")
+        throw new error("Password is incorrect")
     }
 
     user.password = newPassword
@@ -214,11 +216,11 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
     const {fullName, email, } = req.body
 
     if(!fullName || !email){
-        throw error("All fields are required")
+        throw new Error("All fields are required")
     }
 
-    const user = User.findByIdAndUpdate(
-        req.body?._id,
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
         {
             $set: {
                 fullName,
@@ -234,10 +236,10 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
 })
 
 const updateUserAvatar = asyncHandler( async (req, res) => {
-    const avatarLocalPath = req.files?.path
+    const avatarLocalPath = req.file.path
 
     if(!avatarLocalPath){
-      throw error("Avatar file is required")
+      throw new Error("Avatar file is required")
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
@@ -262,10 +264,10 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 })
 
 const updateUserCoverImage = asyncHandler( async (req, res) => {
-    const coverImageLocalPath = req.files?.path
+    const coverImageLocalPath = req.file.path
 
     if(!coverImageLocalPath){
-      throw error("Cover image file is required")
+      throw new Error("Cover image file is required")
     }
 
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
