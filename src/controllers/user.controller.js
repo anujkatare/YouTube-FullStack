@@ -3,6 +3,7 @@ import {User} from '../models/user.model.js'
 import {uploadOnCloudinary} from '../utils/cloudinary.js'
 import jwt from 'jsonwebtoken'
 import { error } from 'console'
+import { subscribe } from 'diagnostics_channel'
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -231,7 +232,7 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
     .json(user)
 })
 
-const updateUserAvatar =asyncHandler( async () => {
+const updateUserAvatar = asyncHandler( async (req, res) => {
     const avatarLocalPath = req.files?.path
 
     if(!avatarLocalPath){
@@ -259,7 +260,7 @@ const updateUserAvatar =asyncHandler( async () => {
     .json(user)
 })
 
-const updateUserCoverImage =asyncHandler( async () => {
+const updateUserCoverImage = asyncHandler( async (req, res) => {
     const coverImageLocalPath = req.files?.path
 
     if(!coverImageLocalPath){
@@ -287,6 +288,75 @@ const updateUserCoverImage =asyncHandler( async () => {
     .json(user)
 }) 
 
+const getUserChannelProfile  = asyncHandler( async (req, res) => {
+      const {username} = req.params
+
+      if(!username?.trim()){
+        throw error("username is missing")
+      }
+
+    const channel = await User.aggregate([
+        {
+            $match:{
+               username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{
+                    $size: "$subscribers"
+                },
+                channelsSubscribedToCount:{
+                    $size: "$subscribedTo"
+                },
+                isSubscribed:{
+                    $cond:{
+                        if:{$in: [req.user?._id, "$subscribers.subscriber"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            }
+        }
+      ])
+
+      if(!channel?.length){
+           throw error("channel does not exist")
+      }
+
+      return res
+      .status(200)
+      .json(channel[0])
+}) 
+
 export {registerUser,
         loginUser,
         logoutUser,
@@ -295,4 +365,5 @@ export {registerUser,
         getCurrentUser,
         updateAccountDetails,
         updateUserAvatar,
-        updateUserCoverImage } 
+        updateUserCoverImage,
+        getUserChannelProfile } 
